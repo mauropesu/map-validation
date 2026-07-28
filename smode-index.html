@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Map Validation · PlaneICAO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDsblpXPEDEMf-20bxkq6auSpwSafduY8",
+    authDomain: "map-validation-e0513.firebaseapp.com",
+    projectId: "map-validation-e0513",
+    storageBucket: "map-validation-e0513.firebasestorage.app",
+    messagingSenderId: "277064121704",
+    appId: "1:277064121704:web:5531b37b5ac5ac9fa6eadd"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+</script>
+<style>
+  :root{
+    --bg: #0B0E11;
+    --panel: #131822;
+    --panel-2: #171D28;
+    --line: #232B38;
+    --text: #E6E8EB;
+    --muted: #7C8794;
+    --amber: #F2A93B;
+    --amber-dim: #3A2E1A;
+    --teal: #3FB8AF;
+    --teal-dim: #16302E;
+    --red: #E15554;
+    --red-dim: #341A19;
+    --blue: #3B9EF2;
+    --blue-dim: #12293F;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 90% -10%, #101722 0%, transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  header{
+    padding:28px 32px 20px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:16px;
+  }
+  .brand-eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    letter-spacing:.14em;
+    color:var(--amber);
+    text-transform:uppercase;
+    margin:0 0 6px;
+  }
+  h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-0.01em;}
+  .stats{display:flex;gap:24px;font-family:'JetBrains Mono',monospace;align-items:center;}
+  .stat{text-align:right;}
+  .stat .n{font-size:22px;font-weight:700;}
+  .stat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+
+  main{padding:24px 32px 60px;max-width:1240px;margin:0 auto;}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:22px;margin-bottom:24px;}
+  .panel h2{margin:0 0 4px;font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;}
+  .panel .sub{font-size:12px;color:var(--muted);margin:0 0 18px;}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;}
+  .grid .full{grid-column:1/-1;}
+  .grid .half{grid-column:span 2;}
+  @media(max-width:900px){.grid{grid-template-columns:1fr 1fr;} .grid .half{grid-column:span 2;}}
+  @media(max-width:560px){.grid{grid-template-columns:1fr;} .grid .half{grid-column:span 1;}}
+
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;}
+  .field input, .field select, .field textarea{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+    padding:9px 11px;border-radius:6px;font-size:14px;font-family:'Inter',sans-serif;outline:none;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{border-color:var(--amber);}
+  .field textarea{resize:vertical;min-height:64px;font-family:'Inter',sans-serif;}
+  .field.mono input{font-family:'JetBrains Mono',monospace;}
+
+  .actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap;}
+  button{
+    font-family:'Inter',sans-serif;font-size:13px;font-weight:600;padding:10px 18px;border-radius:6px;
+    border:1px solid transparent;cursor:pointer;transition:opacity .15s;
+  }
+  button:hover{opacity:.85;}
+  .btn-primary{background:var(--amber);color:#1A1204;}
+  .btn-secondary{background:transparent;border-color:var(--line);color:var(--text);}
+  .btn-danger{background:transparent;border-color:var(--red);color:var(--red);}
+  .logout-btn{background:transparent;border:1px solid var(--line);color:var(--muted);font-size:12px;padding:8px 14px;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{
+    text-align:left;padding:10px 12px;color:var(--muted);font-size:11px;text-transform:uppercase;
+    letter-spacing:.06em;border-bottom:1px solid var(--line);font-weight:600;white-space:nowrap;
+  }
+  tbody tr{border-bottom:1px solid var(--line);cursor:pointer;}
+  tbody tr:hover{background:var(--panel-2);}
+  tbody td{padding:12px;vertical-align:top;}
+  .pill{display:inline-block;font-size:11px;padding:3px 9px;border-radius:999px;font-family:'JetBrains Mono',monospace;white-space:nowrap;}
+  .cell-id{font-family:'JetBrains Mono',monospace;font-weight:600;}
+  .cell-notes{max-width:220px;color:var(--muted);}
+  .url-link{color:var(--blue);text-decoration:none;font-size:12px;}
+  .url-link:hover{text-decoration:underline;}
+
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+  .search-table input{
+    background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+    padding:8px 12px;border-radius:6px;font-size:13px;width:220px;
+  }
+
+  .empty{padding:40px 20px;text-align:center;color:var(--muted);}
+  .empty .big{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--amber);margin-bottom:6px;}
+
+  .toast{
+    position:fixed;bottom:24px;right:24px;background:var(--panel-2);border:1px solid var(--amber);color:var(--text);
+    padding:12px 18px;border-radius:8px;font-size:13px;opacity:0;transform:translateY(10px);
+    transition:all .25s;pointer-events:none;z-index:50;
+  }
+  .toast.show{opacity:1;transform:translateY(0);}
+
+  #loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  #loginScreen .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:36px;width:100%;max-width:380px;}
+  #loginScreen h1{font-size:20px;margin:0 0 4px;}
+  #loginScreen p{color:var(--muted);font-size:13px;margin:0 0 24px;}
+  #loginScreen .field{margin-bottom:14px;}
+  #loginError{color:var(--red);font-size:13px;margin-top:10px;display:none;}
+  #appShell{display:none;}
+  .immfly-logo{background:#fff;padding:8px 14px;border-radius:8px;display:inline-block;line-height:0;}
+  .immfly-logo img{height:22px;display:block;}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="box">
+    <div class="immfly-logo" style="margin-bottom:18px;"><img src="immfly-logo.jpg" alt="Immfly"></div>
+    <h1>Map Validation · PlaneICAO</h1>
+    <p>Ingresa con tu usuario para acceder.</p>
+    <div class="field">
+      <label>Correo</label>
+      <input type="email" id="loginEmail" placeholder="tucorreo@ejemplo.com">
+    </div>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="loginPassword" placeholder="••••••••">
+    </div>
+    <button class="btn-primary" id="btnLogin" style="width:100%;">Ingresar</button>
+    <div id="loginError"></div>
+  </div>
+</div>
+
+<div id="appShell">
+<header>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div class="immfly-logo"><img src="immfly-logo.jpg" alt="Immfly"></div>
+    <div>
+      <p class="brand-eyebrow">Immfly · ADSB / S-MODE Validation</p>
+      <h1>Map Validation · PlaneICAO</h1>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="n mono" id="statTotal">0</div><div class="l">Total</div></div>
+    <div class="stat"><div class="n mono" id="statPending" style="color:var(--blue);">0</div><div class="l">En curso</div></div>
+    <div class="stat"><div class="n mono" id="statDone" style="color:var(--teal);">0</div><div class="l">Successful</div></div>
+    <button class="logout-btn" id="btnLogout">Cerrar sesión</button>
+  </div>
+</header>
+
+<main>
+
+  <div class="panel">
+    <h2 id="formTitle">Nuevo registro</h2>
+    <p class="sub">Actualiza el planeicao (S-MODE) en AWX, y registra aquí la URL del job y su resultado.</p>
+    <div class="grid">
+      <div class="field mono">
+        <label>SPN (aeronave)</label>
+        <input type="text" id="f_spn" placeholder="N124AV">
+      </div>
+      <div class="field mono">
+        <label>S-MODE (hex)</label>
+        <input type="text" id="f_smode" placeholder="E8404D">
+      </div>
+      <div class="field mono">
+        <label>A/C Register</label>
+        <input type="text" id="f_acregister" placeholder="HC-CJV">
+      </div>
+      <div class="field mono">
+        <label>SN (unidad, opcional)</label>
+        <input type="text" id="f_sn" placeholder="W15071881022">
+      </div>
+
+      <div class="field full">
+        <label>URL del job en AWX</label>
+        <input type="text" id="f_url" placeholder="https://darom.t.immfly.io/#/jobs/playbook/17729/output">
+      </div>
+
+      <div class="field half">
+        <label>STATUS</label>
+        <select id="f_status">
+          <option value="">—</option>
+          <option>Ready</option>
+          <option>Running</option>
+          <option>Validating</option>
+          <option>Successful</option>
+          <option>Retry</option>
+          <option>Failed</option>
+        </select>
+      </div>
+      <div class="field half">
+        <label>Fecha</label>
+        <input type="date" id="f_fecha">
+      </div>
+
+      <div class="field full">
+        <label>Notas</label>
+        <textarea id="f_notes" placeholder="Cualquier detalle adicional..."></textarea>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-primary" id="btnSave">Guardar registro</button>
+      <button class="btn-secondary" id="btnClear">Limpiar formulario</button>
+      <button class="btn-danger" id="btnDelete" style="display:none;">Eliminar este registro</button>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div>
+      <select id="statusFilter" style="background:var(--panel-2);border:1px solid var(--line);color:var(--text);padding:9px 12px;border-radius:6px;font-size:13px;">
+        <option value="todas">Todas</option>
+        <option>Ready</option>
+        <option>Running</option>
+        <option>Validating</option>
+        <option>Successful</option>
+        <option>Retry</option>
+        <option>Failed</option>
+      </select>
+    </div>
+    <div class="search-table">
+      <input type="text" id="tableSearch" placeholder="Filtrar tabla...">
+    </div>
+    <button class="btn-secondary" id="btnExportExcel">Exportar Excel (.xlsx)</button>
+    <button class="btn-secondary" id="btnBackup">Respaldo completo (JSON)</button>
+    <label class="btn-secondary" for="btnRestore" style="display:inline-flex;align-items:center;cursor:pointer;">
+      Restaurar respaldo
+      <input type="file" id="btnRestore" accept=".json" style="display:none;">
+    </label>
+  </div>
+
+  <div class="panel" style="padding:0;overflow:hidden;">
+    <div style="overflow-x:auto;">
+      <table id="recordsTable">
+        <thead>
+          <tr>
+            <th>STATUS</th>
+            <th>SPN</th>
+            <th>S-MODE</th>
+            <th>A/C Register</th>
+            <th>SN</th>
+            <th>Job URL</th>
+            <th>Notas</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <div id="emptyState" class="empty" style="display:none;">
+      <div class="big">SIN REGISTROS</div>
+      <div>Agrega tu primer registro arriba para empezar.</div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let records = [];
+let editingId = null;
+let currentFilter = 'todas';
+let recordsUnsub = null;
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+function ordinalSuffix(day){
+  if(day > 3 && day < 21) return 'th';
+  switch(day % 10){
+    case 1: return 'st';
+    case 2: return 'nd';
+    case 3: return 'rd';
+    default: return 'th';
+  }
+}
+function formatDatePretty(isoDate){
+  if(!isoDate) return '';
+  const [y,m,d] = isoDate.split('-').map(Number);
+  if(!y||!m||!d) return '';
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return `${months[m-1]} ${d}${ordinalSuffix(d)}, ${y}`;
+}
+
+const STATUS_STYLES = {
+  'Ready':      { fg: '#8A93A3', bg: '#262B36' },
+  'Running':    { fg: '#3B9EF2', bg: '#12293F' },
+  'Validating': { fg: '#B18CF2', bg: '#2E2340' },
+  'Successful': { fg: '#8CF26B', bg: '#223A1C' },
+  'Retry':      { fg: '#F2793B', bg: '#3A2416' },
+  'Failed':     { fg: '#E15554', bg: '#341A19' },
+};
+
+function statusStyle(status){
+  return STATUS_STYLES[status] || { fg: 'var(--muted)', bg: 'var(--panel-2)' };
+}
+
+function startListeners(){
+  recordsUnsub = db.collection('records').onSnapshot(snapshot=>{
+    records = snapshot.docs.map(d=>({ id: d.id, ...d.data() }));
+    renderTable();
+    updateStats();
+  }, err=>{
+    showToast('Error leyendo registros: ' + err.message);
+  });
+}
+
+function stopListeners(){
+  if(recordsUnsub) recordsUnsub();
+  records = [];
+}
+
+function updateStats(){
+  document.getElementById('statTotal').textContent = records.length;
+  document.getElementById('statPending').textContent = records.filter(r=>['Running','Validating','Retry','Ready'].includes(r.status)).length;
+  document.getElementById('statDone').textContent = records.filter(r=>r.status==='Successful').length;
+}
+
+function fieldsFromForm(){
+  return {
+    spn: document.getElementById('f_spn').value.trim().toUpperCase(),
+    smode: document.getElementById('f_smode').value.trim().toUpperCase(),
+    acregister: document.getElementById('f_acregister').value.trim().toUpperCase(),
+    sn: document.getElementById('f_sn').value.trim().toUpperCase(),
+    url: document.getElementById('f_url').value.trim(),
+    status: document.getElementById('f_status').value,
+    notes: document.getElementById('f_notes').value.trim(),
+    fecha: document.getElementById('f_fecha').value,
+  };
+}
+
+function fillForm(rec){
+  document.getElementById('f_spn').value = rec.spn||'';
+  document.getElementById('f_smode').value = rec.smode||'';
+  document.getElementById('f_acregister').value = rec.acregister||'';
+  document.getElementById('f_sn').value = rec.sn||'';
+  document.getElementById('f_url').value = rec.url||'';
+  document.getElementById('f_status').value = rec.status||'';
+  document.getElementById('f_notes').value = rec.notes||'';
+  document.getElementById('f_fecha').value = rec.fecha||'';
+}
+
+function clearForm(){
+  fillForm({});
+  editingId = null;
+  document.getElementById('formTitle').textContent = 'Nuevo registro';
+  document.getElementById('btnDelete').style.display = 'none';
+  autofillFecha();
+}
+
+function autofillFecha(){
+  const fecha = document.getElementById('f_fecha');
+  if(!fecha.value){
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth()+1).padStart(2,'0');
+    const dd = String(today.getDate()).padStart(2,'0');
+    fecha.value = `${yyyy}-${mm}-${dd}`;
+  }
+}
+
+document.getElementById('btnClear').addEventListener('click', clearForm);
+
+document.getElementById('btnSave').addEventListener('click', async ()=>{
+  const data = fieldsFromForm();
+  if(!data.spn){
+    showToast('Ingresa al menos el SPN');
+    return;
+  }
+  try{
+    if(editingId){
+      await db.collection('records').doc(editingId).set(data, { merge: true });
+      showToast('Registro actualizado');
+    } else {
+      const newId = Date.now().toString(36);
+      await db.collection('records').doc(newId).set(data);
+      showToast('Registro guardado');
+    }
+    clearForm();
+  }catch(e){
+    showToast('Error guardando: ' + e.message);
+  }
+});
+
+document.getElementById('btnDelete').addEventListener('click', async ()=>{
+  if(!editingId) return;
+  if(!confirm('¿Eliminar este registro? Esta acción no se puede deshacer.')) return;
+  try{
+    await db.collection('records').doc(editingId).delete();
+    clearForm();
+    showToast('Registro eliminado');
+  }catch(e){
+    showToast('Error eliminando: ' + e.message);
+  }
+});
+
+function editRecord(id){
+  const rec = records.find(r=>r.id===id);
+  if(!rec) return;
+  editingId = id;
+  fillForm(rec);
+  document.getElementById('formTitle').textContent = 'Editando registro';
+  document.getElementById('btnDelete').style.display = 'inline-block';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function renderTable(){
+  let list = records.slice();
+  if(currentFilter!=='todas'){
+    list = list.filter(r => r.status === currentFilter);
+  }
+  const q = document.getElementById('tableSearch').value.trim().toLowerCase();
+  if(q){
+    list = list.filter(r =>
+      (r.spn||'').toLowerCase().includes(q) ||
+      (r.smode||'').toLowerCase().includes(q) ||
+      (r.acregister||'').toLowerCase().includes(q) ||
+      (r.sn||'').toLowerCase().includes(q) ||
+      (r.notes||'').toLowerCase().includes(q)
+    );
+  }
+  list.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('emptyState');
+  tbody.innerHTML = '';
+
+  if(list.length===0){
+    empty.style.display = 'block';
+    document.getElementById('recordsTable').style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  document.getElementById('recordsTable').style.display = 'table';
+
+  for(const r of list){
+    const tr = document.createElement('tr');
+    const s = statusStyle(r.status);
+    tr.style.boxShadow = `inset 3px 0 0 ${s.fg}`;
+    tr.onclick = ()=>editRecord(r.id);
+    const urlCell = r.url
+      ? `<a class="url-link" href="${r.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Ver job ↗</a>`
+      : '—';
+    tr.innerHTML = `
+      <td><span class="pill" style="color:${s.fg};background:${s.bg};">${r.status||'—'}</span></td>
+      <td class="cell-id">${r.spn||'—'}</td>
+      <td class="cell-id">${r.smode||'—'}</td>
+      <td class="cell-id">${r.acregister||'—'}</td>
+      <td class="cell-id">${r.sn||'—'}</td>
+      <td>${urlCell}</td>
+      <td class="cell-notes">${r.notes||'—'}</td>
+      <td class="mono">${r.fecha ? formatDatePretty(r.fecha) : '—'}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+document.getElementById('statusFilter').addEventListener('change', (e)=>{
+  currentFilter = e.target.value;
+  renderTable();
+});
+document.getElementById('tableSearch').addEventListener('input', renderTable);
+document.getElementById('f_spn').addEventListener('input', autofillFecha);
+
+document.getElementById('btnExportExcel').addEventListener('click', ()=>{
+  if(records.length===0){ showToast('No hay registros para exportar'); return; }
+  const rows = records.map(r=>({
+    'SPN': r.spn||'', 'S-MODE': r.smode||'', 'A/C Register': r.acregister||'',
+    'SN': r.sn||'', 'URL': r.url||'', 'STATUS': r.status||'', 'Notas': r.notes||'', 'Fecha': r.fecha||''
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows, { header: ['SPN','S-MODE','A/C Register','SN','URL','STATUS','Notas','Fecha'] });
+  ws['!cols'] = [{wch:10},{wch:10},{wch:12},{wch:16},{wch:45},{wch:12},{wch:30},{wch:14}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'S-MODE Tracker');
+  XLSX.writeFile(wb, `smode-tracker-${new Date().toISOString().slice(0,10)}.xlsx`);
+  showToast('Excel exportado');
+});
+
+document.getElementById('btnBackup').addEventListener('click', ()=>{
+  const backup = { records, exportedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `smode-respaldo-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('btnRestore').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (evt)=>{
+    try{
+      const data = JSON.parse(evt.target.result);
+      const newRecords = data.records || [];
+      if(!confirm('Esto reemplazará todos los registros actuales por los del respaldo. ¿Continuar?')) return;
+
+      const existingSnap = await db.collection('records').get();
+      const allOps = [];
+      existingSnap.docs.forEach(d=> allOps.push({type:'delete', ref:d.ref}));
+      newRecords.forEach(r=>{
+        const {id, ...rest} = r;
+        allOps.push({type:'set', ref: db.collection('records').doc(id || Date.now().toString(36)+Math.random().toString(36).slice(2)), data: rest});
+      });
+      for(let i=0; i<allOps.length; i+=450){
+        const batch = db.batch();
+        allOps.slice(i, i+450).forEach(op=>{
+          if(op.type==='delete') batch.delete(op.ref);
+          else batch.set(op.ref, op.data);
+        });
+        await batch.commit();
+      }
+      showToast('Respaldo restaurado correctamente');
+    }catch(err){
+      showToast('Archivo de respaldo inválido o error: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+// ---- Auth ----
+document.getElementById('btnLogin').addEventListener('click', doLogin);
+document.getElementById('loginPassword').addEventListener('keydown', (e)=>{ if(e.key==='Enter') doLogin(); });
+document.getElementById('loginEmail').addEventListener('keydown', (e)=>{ if(e.key==='Enter') doLogin(); });
+
+function doLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errBox = document.getElementById('loginError');
+  errBox.style.display = 'none';
+  if(!email || !password){
+    errBox.textContent = 'Ingresa tu correo y contraseña.';
+    errBox.style.display = 'block';
+    return;
+  }
+  auth.signInWithEmailAndPassword(email, password).catch(err=>{
+    errBox.textContent = 'No se pudo ingresar: correo o contraseña incorrectos.';
+    errBox.style.display = 'block';
+  });
+}
+
+document.getElementById('btnLogout').addEventListener('click', ()=>{
+  auth.signOut();
+});
+
+auth.onAuthStateChanged(user=>{
+  if(user){
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appShell').style.display = 'block';
+    document.getElementById('loginPassword').value = '';
+    startListeners();
+    clearForm();
+  } else {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('appShell').style.display = 'none';
+    stopListeners();
+  }
+});
+</script>
+
+</body>
+</html>

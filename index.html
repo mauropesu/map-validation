@@ -503,7 +503,27 @@ document.getElementById('statusFilter').addEventListener('change', (e)=>{
   renderTable();
 });
 document.getElementById('tableSearch').addEventListener('input', renderTable);
+function getMostRecentRecordForSPN(spn){
+  const matches = records.filter(r => (r.spn||'').toUpperCase() === spn);
+  if(matches.length===0) return null;
+  matches.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  return matches[0];
+}
+
+function applySPNHistory(){
+  const spn = document.getElementById('f_spn').value.trim().toUpperCase();
+  if(!spn) return;
+  const rec = getMostRecentRecordForSPN(spn);
+  if(!rec) return;
+  if(!document.getElementById('f_sn').value.trim() && rec.sn) document.getElementById('f_sn').value = rec.sn;
+  if(!document.getElementById('f_acregister').value.trim() && rec.acregister) document.getElementById('f_acregister').value = rec.acregister;
+  showToast('SN y A/C Register autocompletados desde un registro anterior de esta aeronave');
+}
+
 document.getElementById('f_spn').addEventListener('input', autofillFecha);
+document.getElementById('f_spn').addEventListener('blur', ()=>{
+  if(!editingId) applySPNHistory();
+});
 
 document.getElementById('btnExportExcel').addEventListener('click', ()=>{
   if(records.length===0){ showToast('No hay registros para exportar'); return; }

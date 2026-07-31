@@ -389,8 +389,9 @@ function startListeners(){
 
   const acRef = db.collection('meta').doc('ac_smode');
   acMasterUnsub = acRef.onSnapshot(async docSnap=>{
-    if(docSnap.exists){
-      acMaster = docSnap.data().entries || {};
+    const stored = docSnap.exists ? (docSnap.data().entries || {}) : {};
+    if(docSnap.exists && Object.keys(stored).length > 0){
+      acMaster = stored;
     } else {
       acMaster = {};
       DEFAULT_AC_SMODE.forEach(([ac,smode])=>{ acMaster[ac.toUpperCase()] = smode.toUpperCase(); });
@@ -402,8 +403,9 @@ function startListeners(){
 
   const spnAcRef = db.collection('meta').doc('spn_ac');
   spnAcUnsub = spnAcRef.onSnapshot(async docSnap=>{
-    if(docSnap.exists){
-      spnAcMaster = docSnap.data().entries || {};
+    const stored = docSnap.exists ? (docSnap.data().entries || {}) : {};
+    if(docSnap.exists && Object.keys(stored).length > 0){
+      spnAcMaster = stored;
     } else {
       spnAcMaster = {};
       DEFAULT_SPN_AC.forEach(([spn,ac])=>{ spnAcMaster[spn.toUpperCase()] = ac.toUpperCase(); });
@@ -414,8 +416,9 @@ function startListeners(){
 
   const snRef = db.collection('meta').doc('sn_spn');
   snMasterUnsub = snRef.onSnapshot(async docSnap=>{
-    if(docSnap.exists){
-      snMaster = docSnap.data().entries || {};
+    const stored = docSnap.exists ? (docSnap.data().entries || {}) : {};
+    if(docSnap.exists && Object.keys(stored).length > 0){
+      snMaster = stored;
     } else {
       snMaster = {};
       DEFAULT_SN_SPN.forEach(([sn,spn])=>{ snMaster[sn.toUpperCase()] = spn.toUpperCase(); });

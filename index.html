@@ -189,7 +189,7 @@
 
   <details class="admin" id="adminDetails" style="margin-bottom:24px;">
     <summary style="cursor:pointer;font-size:13px;color:var(--muted);padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-radius:8px;list-style:none;">
-      ⚙ Base maestra (<span id="acCount">0</span> A/C→S-MODE · <span id="spnAcCount">0</span> SPN→A/C) — actualizar
+      ⚙ Base maestra (<span id="acCount">0</span> A/C→S-MODE · <span id="spnAcCount">0</span> SPN→A/C · <span id="snCount">0</span> SN→SPN) — actualizar
     </summary>
     <div style="background:var(--panel);border:1px solid var(--line);border-top:none;border-radius:0 0 8px 8px;padding:18px;">
       <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">Pega filas para agregar/actualizar. Formato: dos columnas separadas por tab o coma, una fila por línea.</p>
@@ -202,10 +202,15 @@
           <label>SPN → A/C Register (ej. N124AV, HC-CJV)</label>
           <textarea id="spnAcPaste" style="min-height:100px;font-family:'JetBrains Mono',monospace;font-size:12px;" placeholder="N124AV,HC-CJV"></textarea>
         </div>
+        <div class="field full">
+          <label>SN → SPN (ej. W15071881922, N094AV)</label>
+          <textarea id="snPaste" style="min-height:100px;font-family:'JetBrains Mono',monospace;font-size:12px;" placeholder="W15071881922,N094AV"></textarea>
+        </div>
       </div>
       <div class="actions">
         <button class="btn-primary" id="btnUpdateAC">Actualizar A/C→S-MODE</button>
         <button class="btn-primary" id="btnUpdateSPNAC">Actualizar SPN→A/C</button>
+        <button class="btn-primary" id="btnUpdateSN">Actualizar SN→SPN</button>
       </div>
     </div>
   </details>
@@ -325,8 +330,10 @@ let currentFilter = 'todas';
 let recordsUnsub = null;
 let acMasterUnsub = null;
 let spnAcUnsub = null;
+let snMasterUnsub = null;
 let acMaster = {}; // A/C Register -> S-MODE
 let spnAcMaster = {}; // SPN -> A/C Register
+let snMaster = {}; // SN -> SPN (from "SPN Servers", 158 units)
 
 const DEFAULT_AC_SMODE = [["HC-CJV", "E8404D"], ["HC-CJW", "E84075"], ["HC-CRU", "E84079"], ["HC-CSF", "E8407D"], ["HC-CTX", "E84084"], ["HK-5273", "0AC3D1"], ["HK-5318", "0AC95B"], ["HK-5319", "0AC95A"], ["HK-5320", "0AC95D"], ["HK-5335", "0AC98A"], ["HK-5352", "0AC9C3"], ["HK-5353", "0AC9C2"], ["HK-5360", "0AC9DE"], ["HK-5361", "0AC9E1"], ["HK-5365", "0AC9F0"], ["HK-5366", "0AC9EF"], ["HK-5367", "0AC9EE"], ["HK-5368", "0AC9F2"], ["HK-5378", "0ACA28"], ["HK-5388", "0ACA5D"], ["HK-5389", "0ACA5F"], ["HK-5390", "0ACA5E"], ["HK-5406", "0ACA89"], ["HK-5407", "0ACA8D"], ["HK-5408", "0ACA8E"], ["HK-5409", "0ACAAA"], ["HK-5410", "0ACAAB"], ["HK-5421", "0ACAC6"], ["HK-5422", "0ACAC0"], ["HK-5423", "0ACABF"], ["HK-5424", "0ACAC1"], ["HK-5425", "0ACAC2"], ["N195AV", "A17AD2"], ["N206FR", "A1A8DA"], ["N207FR", "A1AC91"], ["N230AC", "A20883"], ["N253AC", "A262A6"], ["N281AV", "A2D1C6"], ["N284AV", "A2DCEB"], ["N345AV", "A3CFF5"], ["N398AV", "A4A095"], ["N401AV", "A4B06C"], ["N411AE", "A4D7DC"], ["N411AV", "A4D7EB"], ["N416AV", "A4EA7E"], ["N422AV", "A50321"], ["N426AV", "A511FD"], ["N4304", "A52602"], ["N446AV", "A560FB"], ["N451AV", "A575E7"], ["N454AV", "A5810C"], ["N477AV", "A5DB2F"], ["N481AV", "A5EC64"], ["N519AV", "A682F2"], ["N536AV", "A6C6CB"], ["N538AV", "A6CE39"], ["N557AV", "A71980"], ["N562AV", "A72E6C"], ["N567AV", "A740FF"], ["N599AV", "A7BEEA"], ["N632AV", "A8453E"], ["N647AV", "A87F50"], ["N664AV", "A8C329"], ["N686TA", "A91B2B"], ["N688TA", "A92299"], ["N689TA", "A92650"], ["N691AV", "A92E81"], ["N723AV", "A9AEC5"], ["N724AV", "A9B27C"], ["N726AV", "A9B9EA"], ["N728AV", "A9C158"], ["N740AV", "A9F29E"], ["N742AV", "A9FA0C"], ["N743AV", "A9FDC3"], ["N745AV", "AA0531"], ["N748AV", "AA1056"], ["N750AV", "AA1A1D"], ["N755AV", "AA2CB0"], ["N762AV", "AA490A"], ["N763AV", "AA4CC1"], ["N764AV", "AA5078"], ["N766AV", "AA57E6"], ["N769AV", "AA630B"], ["N775AV", "AA7BAE"], ["N776AV", "AA7F65"], ["N779AV", "AA8A8A"], ["N788AV", "AAAE52"], ["N818AV", "AB2728"], ["N821AV", "AB34A6"], ["N862AV", "ABD659"], ["N901AV", "AC72F7"], ["N902AV", "AC76AE"], ["N903AV", "AC7A65"], ["N904AV", "AC7E1C"], ["N905AV", "AC81D3"], ["N908AV", "AC8CF8"], ["N919AV", "ACB82E"], ["N920AV", "ACBE3E"], ["N920CG", "ACBE63"], ["N930AV", "ACE5BD"], ["N931AV", "ACE974"], ["N932AV", "ACED2B"], ["N934AG", "ACF48C"], ["N937AV", "ACFFBE"], ["N938AV", "AD0375"], ["N939AV", "AD072C"], ["N940AV", "AD0D3C"], ["N942AV", "AD14AA"], ["N943AV", "AD1861"], ["N944AV", "AD1C18"], ["N945AV", "AD1FCF"], ["N946AV", "AD2386"], ["N948AV", "AD2AF4"], ["N950AV", "AD34BB"], ["N951AV", "AD3872"], ["N954AV", "AD4397"], ["N955AV", "AD474E"], ["N956AV", "AD4B05"], ["N957AV", "AD4EBC"], ["N958AV", "AD5273"], ["N959AV", "AD562A"], ["N960AV", "AD5C3A"], ["N961AV", "AD5FF1"], ["N962AV", "AD63A8"], ["N963AV", "AD675F"], ["N964AV", "AD6B16"], ["N965AV", "AD6ECD"], ["N966AV", "AD7284"], ["N967AV", "AD763B"], ["N980AV", "ADAB38"], ["N992AV", "ADDA25"]];
 
@@ -353,6 +360,8 @@ function formatDatePretty(isoDate){
   const [y,m,d] = isoDate.split('-').map(Number);
   if(!y||!m||!d) return '';
   const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+const DEFAULT_SN_SPN = [["W14031869322", "N002AV"], ["W01041869622", "N003AV"], ["W14031867522", "N004AV"], ["W14031867722", "N005AV"], ["W01041869522", "N006AV"], ["W14031868822", "N007AV"], ["W14031868722", "N008AV"], ["W14031868622", "N009AV"], ["W14031868522", "N010AV"], ["W01041869922", "N011AV"], ["W14031868222", "N012AV"], ["W14031868022", "N013AV"], ["W14031869122", "N014AV"], ["W14031869022", "N015AV"], ["W14031869222", "N016AV"], ["W14031868422", "N017AV"], ["W01041869722", "N018AV"], ["W01041870122", "N019AV"], ["W14031867422", "N020AV"], ["W14031868922", "N021AV"], ["W01041869822", "N022AV"], ["W14031868322", "N023AV"], ["W14031867822", "N024AV"], ["W14031867622", "N025AV"], ["W14031867922", "N026AV"], ["W14031868122", "N027AV"], ["W14061878022", "N028AV"], ["W14061878122", "N029AV"], ["W14061878422", "N030AV"], ["W14061878722", "N031AV"], ["W14061878322", "N032AV"], ["W14061878522", "N033AV"], ["W14061878822", "N034AV"], ["W20051876522", "N035AV"], ["W01041870822", "N036AV"], ["W01041871322", "N037AV"], ["W01041871022", "N038AV"], ["W20051877122", "N039AV"], ["W01041870422", "N040AV"], ["W01041870922", "N041AV"], ["W01041871122", "N042AV"], ["W20051877022", "N043AV"], ["W20051876922", "N044AV"], ["W20051875422", "N045AV"], ["W20051876122", "N046AV"], ["W20051876622", "N047AV"], ["W20041874622", "N048AV"], ["W20051877622", "N049AV"], ["W20051877522", "N050AV"], ["W20051875722", "N051AV"], ["W01041870622", "N052AV"], ["W14061878622", "N053AV"], ["W14061877922", "N054AV"], ["W20051876222", "N055AV"], ["W01041870522", "N056AV"], ["W20051876022", "N057AV"], ["W14061878222", "N058AV"], ["W01041870322", "N059AV"], ["W01041870722", "N060AV"], ["W20051876722", "N061AV"], ["W20051875922", "N062AV"], ["W20051877322", "N063AV"], ["W20051875522", "N064AV"], ["W20051875622", "N065AV"], ["W20041875022", "N066AV"], ["W20051876422", "N067AV"], ["W20041874322", "N068AV"], ["W01041871422", "N069AV"], ["W20041875122", "N070AV"], ["W01041871222", "N071AV"], ["W20051875822", "N072AV"], ["W20051877222", "N073AV"], ["W20041874422", "N074AV"], ["W01041870022", "N075AV"], ["W01041870222", "N076AV"], ["W20051877822", "N077AV"], ["W20051877422", "N078AV"], ["W20051876822", "N079AV"], ["W20041874222", "N080AV"], ["W20051876322", "N081AV"], ["W20041874722", "N082AV"], ["W20051877722", "N083AV"], ["W20041874922", "N084AV"], ["W20041874522", "N085AV"], ["W15071882022", "N086AV"], ["W15071881822", "N087AV"], ["W15071880622", "N088AV"], ["W15071881222", "N089AV"], ["W15071882422", "N090AV"], ["W15071880922", "N091AV"], ["W15071881622", "N092AV"], ["W15071880822", "N093AV"], ["W15071881922", "N094AV"], ["W15071882122", "N095AV"], ["W15071881522", "N096AV"], ["W15071880522", "N097AV"], ["W15071881722", "N098AV"], ["W03021890223", "N099AV"], ["W03021891123", "N100AV"], ["W31031891923", "N101AV"], ["W03021889523", "N102AV"], ["W03021889023", "N103AV"], ["W03021890323", "N104AV"], ["W03021890623", "N105AV"], ["W03021890723", "N106AV"], ["W03021891323", "N107AV"], ["W03021889123", "N108AV"], ["W03021891423", "N109AV"], ["W03021890923", "N110AV"], ["W03021888923", "N111AV"], ["W03021890523", "N112AV"], ["W03021889423", "N113AV"], ["W03021889923", "N114AV"], ["W03021890823", "N115AV"], ["W03021889323", "N116AV"], ["W03021889823", "N117AV"], ["W03021890423", "N118AV"], ["W03021889723", "N119AV"], ["W03021890023", "N120AV"], ["W03021891223", "N121AV"], ["W03021890123", "N122AV"], ["W15071881122", "N123AV"], ["W15071881022", "N124AV"], ["W03021891023", "N126AV"], ["W03021889223", "N127AV"], ["KONUK10295951", "N131AV"], ["KONUK10295862", "N132AV"], ["KONUK10295857", "N133AV"], ["KONUK10295952", "N134AV"], ["KONUK10295860", "N135AV"], ["KONUK10295858", "N136AV"], ["KONUK10295859", "N137AV"], ["KONUK10295867", "N138AV"], ["KONUK10295866", "N139AV"], ["KONUK10295865", "N140AV"], ["KONUK10295856", "N141AV"], ["KONUK10295953", "N142AV"], ["KONUK10295861", "N143AV"], ["KONUK10295855", "N144AV"], ["KONUK10295946", "N145AV"], ["KONUK10295947", "N146AV"], ["KONUK10295941", "N147AV"], ["KONUK10295956", "N148AV"], ["KONUK10295942", "N149AV"], ["KONUK10295943", "N150AV"], ["KONUK10295955", "N151AV"], ["KONUK10295864", "N152AV"], ["KONUK10295850", "N153AV"], ["KONUK10295868", "N154AV"], ["KONUK10295960", "N155AV"], ["KONUK10295959", "N156AV"], ["KONUK10295950", "N157AV"], ["KONUK10295945", "N158AV"], ["KONUK10295863", "N159AV"], ["KONUK10295944", "N160AV"], ["KONUK10295949", "N161AV"], ["KONUK10295948", "N162AV"], ["KONUK10295958", "N163AV"]];
   return `${months[m-1]} ${d}${ordinalSuffix(d)}, ${y}`;
 }
 
@@ -401,15 +410,29 @@ function startListeners(){
     }
     document.getElementById('spnAcCount').textContent = Object.keys(spnAcMaster).length;
   }, err=>{ showToast('Error leyendo SPN→A/C: ' + err.message); });
+
+  const snRef = db.collection('meta').doc('sn_spn');
+  snMasterUnsub = snRef.onSnapshot(async docSnap=>{
+    if(docSnap.exists){
+      snMaster = docSnap.data().entries || {};
+    } else {
+      snMaster = {};
+      DEFAULT_SN_SPN.forEach(([sn,spn])=>{ snMaster[sn.toUpperCase()] = spn.toUpperCase(); });
+      try{ await snRef.set({ entries: snMaster }); }catch(e){ showToast('Error inicializando SN→SPN: ' + e.message); }
+    }
+    document.getElementById('snCount').textContent = Object.keys(snMaster).length;
+  }, err=>{ showToast('Error leyendo SN→SPN: ' + err.message); });
 }
 
 function stopListeners(){
   if(recordsUnsub) recordsUnsub();
   if(acMasterUnsub) acMasterUnsub();
   if(spnAcUnsub) spnAcUnsub();
+  if(snMasterUnsub) snMasterUnsub();
   records = [];
   acMaster = {};
   spnAcMaster = {};
+  snMaster = {};
 }
 
 function updateStats(){
@@ -581,10 +604,16 @@ function applySPNHistory(){
 
 document.getElementById('f_spn').addEventListener('input', ()=>{
   autofillFecha();
-  if(!editingId) applySPNHistory();
+  if(!editingId){
+    applySPNHistory();
+    applySPNACMaster();
+  }
 });
 document.getElementById('f_spn').addEventListener('blur', ()=>{
-  if(!editingId) applySPNHistory();
+  if(!editingId){
+    applySPNHistory();
+    applySPNACMaster();
+  }
 });
 
 // SPN -> A/C Register (from master "S-Mode" mapping, fixed per airframe)
@@ -598,9 +627,6 @@ function applySPNACMaster(){
     applyACMaster(); // chain: now that A/C Register is known, fetch S-MODE too
   }
 }
-document.getElementById('f_spn').addEventListener('blur', ()=>{
-  if(!editingId) applySPNACMaster();
-});
 
 // A/C Register -> S-MODE (from master "S-Mode")
 function applyACMaster(){
@@ -613,6 +639,23 @@ function applyACMaster(){
 }
 document.getElementById('f_acregister').addEventListener('blur', ()=>{
   if(!editingId) applyACMaster();
+});
+
+// SN -> SPN (from master "SPN Servers")
+function applySNMaster(){
+  const sn = document.getElementById('f_sn').value.trim().toUpperCase();
+  if(!sn) return;
+  if(snMaster[sn] && !document.getElementById('f_spn').value.trim()){
+    document.getElementById('f_spn').value = snMaster[sn];
+    showToast('SPN autocompletado desde la base maestra');
+    applySPNACMaster(); // chain: now that SPN is known, fetch A/C Register + S-MODE too
+  }
+}
+document.getElementById('f_sn').addEventListener('input', ()=>{
+  if(!editingId) applySNMaster();
+});
+document.getElementById('f_sn').addEventListener('blur', ()=>{
+  if(!editingId) applySNMaster();
 });
 
 // Master DB update panel
@@ -649,6 +692,24 @@ document.getElementById('btnUpdateSPNAC').addEventListener('click', async ()=>{
     await db.collection('meta').doc('spn_ac').set({ entries: spnAcMaster });
     document.getElementById('spnAcPaste').value = '';
     showToast(`${count} fila(s) de SPN→A/C actualizadas`);
+  }catch(e){ showToast('Error: ' + e.message); }
+});
+
+document.getElementById('btnUpdateSN').addEventListener('click', async ()=>{
+  const raw = document.getElementById('snPaste').value.trim();
+  if(!raw){ showToast('Pega al menos una fila'); return; }
+  const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  let count = 0;
+  for(const line of lines){
+    const parts = line.split(/[,\t]+|\s{2,}/).map(p=>p.trim()).filter(Boolean);
+    if(parts.length < 2) continue;
+    snMaster[parts[0].toUpperCase()] = parts[1].toUpperCase();
+    count++;
+  }
+  try{
+    await db.collection('meta').doc('sn_spn').set({ entries: snMaster });
+    document.getElementById('snPaste').value = '';
+    showToast(`${count} fila(s) de SN→SPN actualizadas`);
   }catch(e){ showToast('Error: ' + e.message); }
 });
 

@@ -221,7 +221,7 @@
     <div class="grid">
       <div class="field mono">
         <label>SPN (aeronave)</label>
-        <input type="text" id="f_spn" placeholder="N124AV">
+        <select id="f_spn"><option value="">—</option></select>
       </div>
       <div class="field mono">
         <label>S-MODE (hex)</label>
@@ -229,7 +229,7 @@
       </div>
       <div class="field mono">
         <label>A/C Register</label>
-        <input type="text" id="f_acregister" placeholder="HC-CJV">
+        <select id="f_acregister"><option value="">—</option></select>
       </div>
       <div class="field mono">
         <label>SN (unidad, opcional)</label>
@@ -397,6 +397,7 @@ function startListeners(){
       try{ await acRef.set({ entries: acMaster }); }catch(e){ showToast('Error inicializando A/C→S-MODE: ' + e.message); }
     }
     document.getElementById('acCount').textContent = Object.keys(acMaster).length;
+    populateACDropdown();
   }, err=>{ showToast('Error leyendo A/C→S-MODE: ' + err.message); });
 
   const spnAcRef = db.collection('meta').doc('spn_ac');
@@ -421,6 +422,7 @@ function startListeners(){
       try{ await snRef.set({ entries: snMaster }); }catch(e){ showToast('Error inicializando SN→SPN: ' + e.message); }
     }
     document.getElementById('snCount').textContent = Object.keys(snMaster).length;
+    populateSPNDropdown();
   }, err=>{ showToast('Error leyendo SN→SPN: ' + err.message); });
 }
 
@@ -602,18 +604,34 @@ function applySPNHistory(){
   showToast('SN y A/C Register autocompletados desde un registro anterior de esta aeronave');
 }
 
-document.getElementById('f_spn').addEventListener('input', ()=>{
+// Populate SPN dropdown from the SN->SPN master (unique SPN values, sorted)
+function populateSPNDropdown(){
+  const sel = document.getElementById('f_spn');
+  const current = sel.value;
+  const spns = Array.from(new Set(Object.values(snMaster))).sort();
+  sel.innerHTML = '<option value="">—</option>' + spns.map(s=>`<option value="${s}">${s}</option>`).join('');
+  if(spns.includes(current)) sel.value = current;
+}
+
+// Populate A/C Register dropdown from the A/C->S-MODE master (sorted)
+function populateACDropdown(){
+  const sel = document.getElementById('f_acregister');
+  const current = sel.value;
+  const acs = Object.keys(acMaster).sort();
+  sel.innerHTML = '<option value="">—</option>' + acs.map(a=>`<option value="${a}">${a}</option>`).join('');
+  if(acs.includes(current)) sel.value = current;
+}
+
+document.getElementById('f_spn').addEventListener('change', ()=>{
   autofillFecha();
   if(!editingId){
     applySPNHistory();
     applySPNACMaster();
   }
 });
-document.getElementById('f_spn').addEventListener('blur', ()=>{
-  if(!editingId){
-    applySPNHistory();
-    applySPNACMaster();
-  }
+
+document.getElementById('f_acregister').addEventListener('change', ()=>{
+  if(!editingId) applyACMaster();
 });
 
 // SPN -> A/C Register (from master "S-Mode" mapping, fixed per airframe)
@@ -651,9 +669,6 @@ function applyACMaster(){
     showToast('S-MODE autocompletado desde la base maestra');
   }
 }
-document.getElementById('f_acregister').addEventListener('blur', ()=>{
-  if(!editingId) applyACMaster();
-});
 
 // SN -> SPN (from master "SPN Servers")
 function applySNMaster(){

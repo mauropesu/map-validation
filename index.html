@@ -187,6 +187,29 @@
 
 <main>
 
+  <details class="admin" id="adminDetails" style="margin-bottom:24px;">
+    <summary style="cursor:pointer;font-size:13px;color:var(--muted);padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-radius:8px;list-style:none;">
+      ⚙ Base maestra (<span id="acCount">0</span> A/C→S-MODE · <span id="spnAcCount">0</span> SPN→A/C) — actualizar
+    </summary>
+    <div style="background:var(--panel);border:1px solid var(--line);border-top:none;border-radius:0 0 8px 8px;padding:18px;">
+      <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">Pega filas para agregar/actualizar. Formato: dos columnas separadas por tab o coma, una fila por línea.</p>
+      <div class="grid">
+        <div class="field half">
+          <label>A/C Register → S-MODE (ej. HC-CJV, E8404D)</label>
+          <textarea id="acPaste" style="min-height:100px;font-family:'JetBrains Mono',monospace;font-size:12px;" placeholder="HC-CJV,E8404D"></textarea>
+        </div>
+        <div class="field half">
+          <label>SPN → A/C Register (ej. N124AV, HC-CJV)</label>
+          <textarea id="spnAcPaste" style="min-height:100px;font-family:'JetBrains Mono',monospace;font-size:12px;" placeholder="N124AV,HC-CJV"></textarea>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-primary" id="btnUpdateAC">Actualizar A/C→S-MODE</button>
+        <button class="btn-primary" id="btnUpdateSPNAC">Actualizar SPN→A/C</button>
+      </div>
+    </div>
+  </details>
+
   <div class="panel">
     <h2 id="formTitle">Nuevo registro</h2>
     <p class="sub">Actualiza el planeicao (S-MODE) en AWX, y registra aquí la URL del job y su resultado.</p>
@@ -300,6 +323,14 @@ let records = [];
 let editingId = null;
 let currentFilter = 'todas';
 let recordsUnsub = null;
+let acMasterUnsub = null;
+let spnAcUnsub = null;
+let acMaster = {}; // A/C Register -> S-MODE
+let spnAcMaster = {}; // SPN -> A/C Register
+
+const DEFAULT_AC_SMODE = [["HC-CJV", "E8404D"], ["HC-CJW", "E84075"], ["HC-CRU", "E84079"], ["HC-CSF", "E8407D"], ["HC-CTX", "E84084"], ["HK-5273", "0AC3D1"], ["HK-5318", "0AC95B"], ["HK-5319", "0AC95A"], ["HK-5320", "0AC95D"], ["HK-5335", "0AC98A"], ["HK-5352", "0AC9C3"], ["HK-5353", "0AC9C2"], ["HK-5360", "0AC9DE"], ["HK-5361", "0AC9E1"], ["HK-5365", "0AC9F0"], ["HK-5366", "0AC9EF"], ["HK-5367", "0AC9EE"], ["HK-5368", "0AC9F2"], ["HK-5378", "0ACA28"], ["HK-5388", "0ACA5D"], ["HK-5389", "0ACA5F"], ["HK-5390", "0ACA5E"], ["HK-5406", "0ACA89"], ["HK-5407", "0ACA8D"], ["HK-5408", "0ACA8E"], ["HK-5409", "0ACAAA"], ["HK-5410", "0ACAAB"], ["HK-5421", "0ACAC6"], ["HK-5422", "0ACAC0"], ["HK-5423", "0ACABF"], ["HK-5424", "0ACAC1"], ["HK-5425", "0ACAC2"], ["N195AV", "A17AD2"], ["N206FR", "A1A8DA"], ["N207FR", "A1AC91"], ["N230AC", "A20883"], ["N253AC", "A262A6"], ["N281AV", "A2D1C6"], ["N284AV", "A2DCEB"], ["N345AV", "A3CFF5"], ["N398AV", "A4A095"], ["N401AV", "A4B06C"], ["N411AE", "A4D7DC"], ["N411AV", "A4D7EB"], ["N416AV", "A4EA7E"], ["N422AV", "A50321"], ["N426AV", "A511FD"], ["N4304", "A52602"], ["N446AV", "A560FB"], ["N451AV", "A575E7"], ["N454AV", "A5810C"], ["N477AV", "A5DB2F"], ["N481AV", "A5EC64"], ["N519AV", "A682F2"], ["N536AV", "A6C6CB"], ["N538AV", "A6CE39"], ["N557AV", "A71980"], ["N562AV", "A72E6C"], ["N567AV", "A740FF"], ["N599AV", "A7BEEA"], ["N632AV", "A8453E"], ["N647AV", "A87F50"], ["N664AV", "A8C329"], ["N686TA", "A91B2B"], ["N688TA", "A92299"], ["N689TA", "A92650"], ["N691AV", "A92E81"], ["N723AV", "A9AEC5"], ["N724AV", "A9B27C"], ["N726AV", "A9B9EA"], ["N728AV", "A9C158"], ["N740AV", "A9F29E"], ["N742AV", "A9FA0C"], ["N743AV", "A9FDC3"], ["N745AV", "AA0531"], ["N748AV", "AA1056"], ["N750AV", "AA1A1D"], ["N755AV", "AA2CB0"], ["N762AV", "AA490A"], ["N763AV", "AA4CC1"], ["N764AV", "AA5078"], ["N766AV", "AA57E6"], ["N769AV", "AA630B"], ["N775AV", "AA7BAE"], ["N776AV", "AA7F65"], ["N779AV", "AA8A8A"], ["N788AV", "AAAE52"], ["N818AV", "AB2728"], ["N821AV", "AB34A6"], ["N862AV", "ABD659"], ["N901AV", "AC72F7"], ["N902AV", "AC76AE"], ["N903AV", "AC7A65"], ["N904AV", "AC7E1C"], ["N905AV", "AC81D3"], ["N908AV", "AC8CF8"], ["N919AV", "ACB82E"], ["N920AV", "ACBE3E"], ["N920CG", "ACBE63"], ["N930AV", "ACE5BD"], ["N931AV", "ACE974"], ["N932AV", "ACED2B"], ["N934AG", "ACF48C"], ["N937AV", "ACFFBE"], ["N938AV", "AD0375"], ["N939AV", "AD072C"], ["N940AV", "AD0D3C"], ["N942AV", "AD14AA"], ["N943AV", "AD1861"], ["N944AV", "AD1C18"], ["N945AV", "AD1FCF"], ["N946AV", "AD2386"], ["N948AV", "AD2AF4"], ["N950AV", "AD34BB"], ["N951AV", "AD3872"], ["N954AV", "AD4397"], ["N955AV", "AD474E"], ["N956AV", "AD4B05"], ["N957AV", "AD4EBC"], ["N958AV", "AD5273"], ["N959AV", "AD562A"], ["N960AV", "AD5C3A"], ["N961AV", "AD5FF1"], ["N962AV", "AD63A8"], ["N963AV", "AD675F"], ["N964AV", "AD6B16"], ["N965AV", "AD6ECD"], ["N966AV", "AD7284"], ["N967AV", "AD763B"], ["N980AV", "ADAB38"], ["N992AV", "ADDA25"]];
+
+const DEFAULT_SPN_AC = [["N124AV", "HC-CJV"], ["N031AV", "HC-CJW"], ["N161AV", "HC-CRU"], ["N111AV", "HC-CSF"], ["N118AV", "HC-CTX"], ["N037AV", "HK-5273"], ["N113AV", "HK-5318"], ["N044AV", "HK-5319"], ["N048AV", "HK-5320"], ["N011AV", "HK-5335"], ["N033AV", "HK-5352"], ["N002AV", "HK-5365"], ["N135AV", "HK-5367"], ["N122AV", "HK-5388"], ["N106AV", "HK-5390"], ["N032AV", "HK-5406"], ["N146AV", "HK-5407"], ["N114AV", "HK-5408"], ["N102AV", "HK-5421"], ["N045AV", "HK-5422"], ["N131AV", "HK-5423"], ["N055AV", "HK-5424"], ["N153AV", "HK-5425"], ["N091AV", "N195AV"], ["N042AV", "N206FR"], ["N016AV", "N207FR"], ["N104AV", "N230AC"], ["N035AV", "N253AC"], ["N041AV", "N281AV"], ["N099AV", "N284AV"], ["N046AV", "N345AV"], ["N013AV", "N398AV"], ["N139AV", "N401AV"], ["N081AV", "N411AE"], ["N126AV", "N411AV"], ["N078AV", "N416AV"], ["N123AV", "N422AV"], ["N141AV", "N426AV"], ["N100AV", "N4304"], ["N073AV", "N446AV"], ["N127AV", "N451AV"], ["N112AV", "N454AV"], ["N134AV", "N477AV"], ["N034AV", "N481AV"], ["N021AV", "N519AV"], ["N152AV", "N536AV"], ["N115AV", "N538AV"], ["N005AV", "N557AV"], ["N157AV", "N562AV"], ["N023AV", "N567AV"], ["N154AV", "N599AV"], ["N069AV", "N632AV"], ["N024AV", "N647AV"], ["N009AV", "N664AV"], ["N003AV", "N686TA"], ["N098AV", "N688TA"], ["N039AV", "N689TA"], ["N138AV", "N691AV"], ["N092AV", "N723AV"], ["N067AV", "N724AV"], ["N121AV", "N726AV"], ["N085AV", "N728AV"], ["N132AV", "N740AV"], ["N155AV", "N742AV"], ["N160AV", "N743AV"], ["N006AV", "N745AV"], ["N047AV", "N748AV"], ["N065AV", "N750AV"], ["N076AV", "N755AV"], ["N084AV", "N763AV"], ["N026AV", "N821AV"], ["N088AV", "N862AV"], ["N075AV", "N902AV"], ["N145AV", "N903AV"], ["N025AV", "N904AV"], ["N074AV", "N905AV"], ["N117AV", "N920CG"], ["N149AV", "N930AV"], ["N057AV", "N931AV"], ["N072AV", "N934AG"], ["N012AV", "N937AV"], ["N062AV", "N938AV"], ["N043AV", "N939AV"], ["N049AV", "N942AV"], ["N027AV", "N944AV"], ["N014AV", "N945AV"], ["N022AV", "N946AV"], ["N071AV", "N948AV"], ["N004AV", "N950AV"], ["N116AV", "N951AV"], ["N162AV", "N954AV"], ["N108AV", "N955AV"], ["N119AV", "N956AV"], ["N007AV", "N957AV"], ["N019AV", "N958AV"], ["N150AV", "N959AV"], ["N083AV", "N960AV"], ["N144AV", "N961AV"], ["N059AV", "N965AV"], ["N079AV", "N980AV"], ["N020AV", "N992AV"]]
 
 function showToast(msg){
   const t = document.getElementById('toast');
@@ -346,11 +377,39 @@ function startListeners(){
   }, err=>{
     showToast('Error leyendo registros: ' + err.message);
   });
+
+  const acRef = db.collection('meta').doc('ac_smode');
+  acMasterUnsub = acRef.onSnapshot(async docSnap=>{
+    if(docSnap.exists){
+      acMaster = docSnap.data().entries || {};
+    } else {
+      acMaster = {};
+      DEFAULT_AC_SMODE.forEach(([ac,smode])=>{ acMaster[ac.toUpperCase()] = smode.toUpperCase(); });
+      try{ await acRef.set({ entries: acMaster }); }catch(e){ showToast('Error inicializando A/C→S-MODE: ' + e.message); }
+    }
+    document.getElementById('acCount').textContent = Object.keys(acMaster).length;
+  }, err=>{ showToast('Error leyendo A/C→S-MODE: ' + err.message); });
+
+  const spnAcRef = db.collection('meta').doc('spn_ac');
+  spnAcUnsub = spnAcRef.onSnapshot(async docSnap=>{
+    if(docSnap.exists){
+      spnAcMaster = docSnap.data().entries || {};
+    } else {
+      spnAcMaster = {};
+      DEFAULT_SPN_AC.forEach(([spn,ac])=>{ spnAcMaster[spn.toUpperCase()] = ac.toUpperCase(); });
+      try{ await spnAcRef.set({ entries: spnAcMaster }); }catch(e){ showToast('Error inicializando SPN→A/C: ' + e.message); }
+    }
+    document.getElementById('spnAcCount').textContent = Object.keys(spnAcMaster).length;
+  }, err=>{ showToast('Error leyendo SPN→A/C: ' + err.message); });
 }
 
 function stopListeners(){
   if(recordsUnsub) recordsUnsub();
+  if(acMasterUnsub) acMasterUnsub();
+  if(spnAcUnsub) spnAcUnsub();
   records = [];
+  acMaster = {};
+  spnAcMaster = {};
 }
 
 function updateStats(){
@@ -520,9 +579,77 @@ function applySPNHistory(){
   showToast('SN y A/C Register autocompletados desde un registro anterior de esta aeronave');
 }
 
-document.getElementById('f_spn').addEventListener('input', autofillFecha);
+document.getElementById('f_spn').addEventListener('input', ()=>{
+  autofillFecha();
+  if(!editingId) applySPNHistory();
+});
 document.getElementById('f_spn').addEventListener('blur', ()=>{
   if(!editingId) applySPNHistory();
+});
+
+// SPN -> A/C Register (from master "S-Mode" mapping, fixed per airframe)
+function applySPNACMaster(){
+  const spn = document.getElementById('f_spn').value.trim().toUpperCase();
+  if(!spn) return;
+  if(spnAcMaster[spn]){
+    if(!document.getElementById('f_acregister').value.trim()){
+      document.getElementById('f_acregister').value = spnAcMaster[spn];
+    }
+    applyACMaster(); // chain: now that A/C Register is known, fetch S-MODE too
+  }
+}
+document.getElementById('f_spn').addEventListener('blur', ()=>{
+  if(!editingId) applySPNACMaster();
+});
+
+// A/C Register -> S-MODE (from master "S-Mode")
+function applyACMaster(){
+  const ac = document.getElementById('f_acregister').value.trim().toUpperCase();
+  if(!ac) return;
+  if(acMaster[ac]){
+    document.getElementById('f_smode').value = acMaster[ac];
+    showToast('S-MODE autocompletado desde la base maestra');
+  }
+}
+document.getElementById('f_acregister').addEventListener('blur', ()=>{
+  if(!editingId) applyACMaster();
+});
+
+// Master DB update panel
+document.getElementById('btnUpdateAC').addEventListener('click', async ()=>{
+  const raw = document.getElementById('acPaste').value.trim();
+  if(!raw){ showToast('Pega al menos una fila'); return; }
+  const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  let count = 0;
+  for(const line of lines){
+    const parts = line.split(/[,\t]+|\s{2,}/).map(p=>p.trim()).filter(Boolean);
+    if(parts.length < 2) continue;
+    acMaster[parts[0].toUpperCase()] = parts[1].toUpperCase();
+    count++;
+  }
+  try{
+    await db.collection('meta').doc('ac_smode').set({ entries: acMaster });
+    document.getElementById('acPaste').value = '';
+    showToast(`${count} fila(s) de A/C→S-MODE actualizadas`);
+  }catch(e){ showToast('Error: ' + e.message); }
+});
+
+document.getElementById('btnUpdateSPNAC').addEventListener('click', async ()=>{
+  const raw = document.getElementById('spnAcPaste').value.trim();
+  if(!raw){ showToast('Pega al menos una fila'); return; }
+  const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  let count = 0;
+  for(const line of lines){
+    const parts = line.split(/[,\t]+|\s{2,}/).map(p=>p.trim()).filter(Boolean);
+    if(parts.length < 2) continue;
+    spnAcMaster[parts[0].toUpperCase()] = parts[1].toUpperCase();
+    count++;
+  }
+  try{
+    await db.collection('meta').doc('spn_ac').set({ entries: spnAcMaster });
+    document.getElementById('spnAcPaste').value = '';
+    showToast(`${count} fila(s) de SPN→A/C actualizadas`);
+  }catch(e){ showToast('Error: ' + e.message); }
 });
 
 document.getElementById('btnExportExcel').addEventListener('click', ()=>{

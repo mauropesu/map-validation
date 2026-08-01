@@ -643,9 +643,7 @@ function applySPNACMaster(){
   const spn = document.getElementById('f_spn').value.trim().toUpperCase();
   if(!spn) return;
   if(spnAcMaster[spn]){
-    if(!document.getElementById('f_acregister').value.trim()){
-      document.getElementById('f_acregister').value = spnAcMaster[spn];
-    }
+    document.getElementById('f_acregister').value = spnAcMaster[spn];
     applyACMaster(); // chain: now that A/C Register is known, fetch S-MODE too
   }
   applySPNtoSN(spn);
@@ -654,7 +652,6 @@ function applySPNACMaster(){
 // SPN -> SN (reverse lookup on the "SPN Servers" master)
 function applySPNtoSN(spn){
   if(!spn) return;
-  if(document.getElementById('f_sn').value.trim()) return; // don't overwrite
   for(const sn in snMaster){
     if(snMaster[sn] === spn){
       document.getElementById('f_sn').value = sn;

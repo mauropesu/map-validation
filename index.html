@@ -629,14 +629,12 @@ function populateACDropdown(){
 
 document.getElementById('f_spn').addEventListener('change', ()=>{
   autofillFecha();
-  if(!editingId){
-    applySPNHistory();
-    applySPNACMaster();
-  }
+  if(!editingId) applySPNHistory();
+  applySPNACMaster();
 });
 
 document.getElementById('f_acregister').addEventListener('change', ()=>{
-  if(!editingId) applyACMaster();
+  applyACMaster();
 });
 
 // SPN -> A/C Register (from master "S-Mode" mapping, fixed per airframe)

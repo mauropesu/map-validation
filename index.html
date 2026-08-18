@@ -165,7 +165,11 @@
       <input type="password" id="loginPassword" placeholder="••••••••">
     </div>
     <button class="btn-primary" id="btnLogin" style="width:100%;">Ingresar</button>
+    <div style="text-align:center;margin-top:14px;">
+      <a href="#" id="btnForgotPassword" style="color:var(--muted);font-size:12px;text-decoration:underline;">¿Olvidaste tu contraseña?</a>
+    </div>
     <div id="loginError"></div>
+    <div id="loginInfo" style="color:var(--teal);font-size:13px;margin-top:10px;display:none;"></div>
   </div>
 </div>
 
@@ -821,6 +825,27 @@ function doLogin(){
     errBox.style.display = 'block';
   });
 }
+
+document.getElementById('btnForgotPassword').addEventListener('click', (e)=>{
+  e.preventDefault();
+  const errBox = document.getElementById('loginError');
+  const infoBox = document.getElementById('loginInfo');
+  errBox.style.display = 'none';
+  infoBox.style.display = 'none';
+  const email = document.getElementById('loginEmail').value.trim();
+  if(!email){
+    errBox.textContent = 'Escribe tu correo arriba primero, y luego haz clic en "¿Olvidaste tu contraseña?".';
+    errBox.style.display = 'block';
+    return;
+  }
+  auth.sendPasswordResetEmail(email).then(()=>{
+    infoBox.textContent = 'Te enviamos un correo a ' + email + ' con instrucciones para restablecer tu contraseña.';
+    infoBox.style.display = 'block';
+  }).catch(err=>{
+    errBox.textContent = 'No se pudo enviar el correo: ' + err.message;
+    errBox.style.display = 'block';
+  });
+});
 
 document.getElementById('btnLogout').addEventListener('click', ()=>{
   auth.signOut();
